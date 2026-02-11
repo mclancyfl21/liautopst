@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 interface TestConnectionButtonProps {
-  testFn: (args?: any) => Promise<{ success: boolean; message: string }>;
+  testFn: (args?: Record<string, string>) => Promise<{ success: boolean; message: string }>;
   label?: string;
   inputNames?: Record<string, string>; // { argName: inputName }
 }
@@ -19,7 +19,7 @@ export function TestConnectionButton({ testFn, label = 'Test Connection', inputN
     setMessage('');
 
     try {
-      let args: any = undefined;
+      let args: Record<string, string> | undefined = undefined;
       
       if (inputNames) {
         args = {};

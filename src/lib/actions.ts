@@ -2,10 +2,11 @@
 
 import { db } from '@/db';
 import { playlists, posts, channels } from '@/db/schema';
-import { eq, or, sql, and } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { enforceEmojis } from './utils/emoji-enforcement';
 import { revalidatePath } from 'next/cache';
 import { getSession } from './auth';
+import { postToLinkedIn } from './linkedin';
 
 async function getUserId() {
   const session = await getSession();
@@ -163,6 +164,13 @@ export async function postNow(id: number) {
 
   console.log(`[ACTION] Posting immediate: ${post.id}`);
   
+  const result = await postToLinkedIn(post.content, post.imageUrl);
+  
+  if (!result.success) {
+    console.error(`[ACTION_ERROR] LinkedIn post failed: ${result.message}`, result.debug);
+    throw new Error(`LinkedIn Error: ${result.message}`);
+  }
+
   await db.update(posts)
     .set({ 
       status: 'posted', 

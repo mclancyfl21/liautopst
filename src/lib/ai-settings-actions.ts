@@ -2,7 +2,7 @@
 
 import { db } from '@/db';
 import { aiProviders } from '@/db/schema';
-import { eq, and, not } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getSession } from './auth';
 

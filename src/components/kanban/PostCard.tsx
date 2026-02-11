@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Pencil, Trash2, Check, X, Image as ImageIcon, Upload, List, Send, Maximize2, Calendar, Clock, Link as LinkIcon, Power } from 'lucide-react';
+import { Pencil, Trash2, Check, X, Image as ImageIcon, Upload, List, Send, Maximize2, Calendar, Link as LinkIcon, Power } from 'lucide-react';
 import { updatePost, deletePost, postNow } from '@/lib/actions';
 
 interface Playlist {

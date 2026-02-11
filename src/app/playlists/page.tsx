@@ -1,6 +1,6 @@
-import { getPlaylists, createPlaylist, updatePlaylist, deletePlaylist } from '@/lib/actions';
+import { getPlaylists, createPlaylist } from '@/lib/actions';
 import Link from 'next/link';
-import { Share2, ListPlus, ArrowLeft, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Share2, ListPlus, ArrowLeft } from 'lucide-react';
 import { PlaylistList } from '@/components/playlists/PlaylistList';
 import { getSession } from '@/lib/auth';
 

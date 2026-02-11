@@ -3,7 +3,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { getCredentials } from './credential-actions';
 import { db } from '@/db';
-import { aiProviders, users } from '@/db/schema';
+import { aiProviders } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSession } from './auth';
 
@@ -67,9 +67,9 @@ export async function testLinkedInConnection(provided?: { clientId?: string, cli
   }
 
   try {
-    const isUrnValid = config.urn.startsWith('urn:li:organization:');
+    const isUrnValid = config.urn.startsWith('urn:li:organization:') || config.urn.startsWith('urn:li:person:');
     if (!isUrnValid) {
-      return { success: false, message: 'Invalid LinkedIn URN format' };
+      return { success: false, message: 'Invalid LinkedIn URN format (must start with urn:li:person: or urn:li:organization:)' };
     }
     
     return { success: true, message: 'LinkedIn credentials format validated (Full API test requires OAuth flow)' };

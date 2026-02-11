@@ -1,12 +1,14 @@
 import cron from 'node-cron';
 import { db } from '@/db';
-import { posts, channels, credentials } from '@/db/schema';
-import { eq, and, isNull, asc, lte, or } from 'drizzle-orm';
+import { posts, channels } from '@/db/schema';
+import { eq, and, isNull, asc, lte } from 'drizzle-orm';
+import { postToLinkedIn as liPost } from './linkedin';
 
-async function postToLinkedIn(post: any) {
-  console.log(`[AUTOMATION] Posting to LinkedIn: ${post.content.substring(0, 50)}...`);
-  // In a real implementation, this would use LinkedIn API with stored credentials
-  return true;
+type Post = typeof posts.$inferSelect;
+
+async function postToLinkedIn(post: Post) {
+  const result = await liPost(post.content, post.imageUrl);
+  return result.success;
 }
 
 async function markAsPosted(postId: number) {

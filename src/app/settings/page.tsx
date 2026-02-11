@@ -16,7 +16,7 @@ export default async function SettingsPage() {
 
   async function handleSubmit(formData: FormData) {
     'use server';
-    const keys = ['linkedin_client_id', 'linkedin_client_secret', 'linkedin_urn', 'inbound_api_token', 'random_mode_active', 'cloudinary_cloud_name', 'cloudinary_api_key', 'cloudinary_api_secret'];
+    const keys = ['linkedin_client_id', 'linkedin_client_secret', 'linkedin_access_token', 'linkedin_urn', 'inbound_api_token', 'random_mode_active', 'cloudinary_cloud_name', 'cloudinary_api_key', 'cloudinary_api_secret'];
     
     for (const key of keys) {
       const value = formData.get(key) as string;
@@ -83,11 +83,22 @@ export default async function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Company URN</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Access Token (OAuth)</label>
+                <input 
+                  name="linkedin_access_token"
+                  type="password" 
+                  defaultValue={creds.linkedin_access_token || ''}
+                  placeholder="AQV..."
+                  className="w-full p-2 border rounded-md"
+                />
+                <p className="text-[10px] text-blue-600 mt-1">Requires w_organization_social or w_member_social scope.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URN (Person or Organization)</label>
                 <input 
                   name="linkedin_urn"
                   type="text" 
-                  placeholder="urn:li:organization:12345"
+                  placeholder="urn:li:person:abc12345 or urn:li:organization:12345"
                   defaultValue={creds.linkedin_urn || ''}
                   className="w-full p-2 border rounded-md"
                 />
@@ -99,6 +110,7 @@ export default async function SettingsPage() {
               inputNames={{
                 clientId: 'linkedin_client_id',
                 clientSecret: 'linkedin_client_secret',
+                accessToken: 'linkedin_access_token',
                 urn: 'linkedin_urn'
               }}
             />

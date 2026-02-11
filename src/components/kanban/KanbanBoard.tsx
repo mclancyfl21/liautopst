@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { PostCard } from './PostCard';
-import { updatePostStatus, createPost, createChannel, deleteChannel, toggleChannel } from '@/lib/actions';
-import { Plus, Image as ImageIcon, Radio, Settings2, Power, Trash2, Clock, CalendarDays, List } from 'lucide-react';
+import { createPost, createChannel, deleteChannel, toggleChannel } from '@/lib/actions';
+import { Plus, Image as ImageIcon, Radio, Power, Trash2, Clock, CalendarDays, List } from 'lucide-react';
 
 interface Post {
   id: number;
@@ -59,7 +59,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    let items = [...inventory];
+    const items = [...inventory];
     const [removed] = items.splice(source.index, 1);
     items.splice(destination.index, 0, removed);
     setInventory(items);
@@ -212,9 +212,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           {isAddingChannel && (
             <form action={async (fd) => {
               const name = fd.get('name') as string;
-              const type = fd.get('type') as any;
+              const type = fd.get('type') as 'playlist' | 'random';
               const plId = fd.get('playlistId') ? Number(fd.get('playlistId')) : null;
-              const scheduleType = fd.get('scheduleType') as any;
+              const scheduleType = fd.get('scheduleType') as 'daily' | 'weekly' | 'monthly';
               const scheduledTime = fd.get('scheduledTime') as string;
               if (name) { 
                 await createChannel(name, type, plId, scheduleType, scheduledTime); 
