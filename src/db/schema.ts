@@ -25,9 +25,9 @@ export const channels = sqliteTable('channels', {
   name: text('name').notNull(),
   type: text('type').notNull(), // 'playlist', 'random'
   playlistId: integer('playlist_id').references(() => playlists.id),
-  scheduleType: text('schedule_type').default('daily'), // 'daily', 'weekly', 'monthly'
-  scheduledTime: text('scheduled_time').default('09:00'), // HH:mm
-  isActive: integer('is_active', { mode: 'boolean' }).default(true),
+  scheduleType: text('schedule_type').default('daily').notNull(), // 'daily', 'weekly', 'monthly'
+  scheduledTime: text('scheduled_time').default('09:00').notNull(), // HH:mm
+  isActive: integer('is_active', { mode: 'boolean' }).default(true).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
 });
 

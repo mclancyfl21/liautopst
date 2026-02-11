@@ -6,7 +6,6 @@ import { TestConnectionButton } from '@/components/settings/TestConnectionButton
 import { testLinkedInConnection, testCloudinaryConnection } from '@/lib/connection-tests';
 import { getAiProviders } from '@/lib/ai-settings-actions';
 import { AiProviderList } from '@/components/settings/AiProviderList';
-import { CloudinarySettings } from '@/components/settings/CloudinarySettings';
 
 export const runtime = 'nodejs';
 
@@ -123,11 +122,47 @@ export default async function SettingsPage() {
             </div>
           </section>
 
-          <CloudinarySettings 
-            initialCloudName={creds.cloudinary_cloud_name || ''}
-            initialApiKey={creds.cloudinary_api_key || ''}
-            initialApiSecret={creds.cloudinary_api_secret || ''}
-          />
+          <section className="bg-white border rounded-xl p-6 shadow-sm">
+            <h2 className="text-xl font-semibold mb-4 text-orange-600">Cloudinary Media Storage</h2>
+            <div className="grid gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cloud Name</label>
+                <input
+                  name="cloudinary_cloud_name"
+                  type="text"
+                  defaultValue={creds.cloudinary_cloud_name || ''}
+                  className="w-full p-2 border rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                <input
+                  name="cloudinary_api_key"
+                  type="text"
+                  defaultValue={creds.cloudinary_api_key || ''}
+                  className="w-full p-2 border rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">API Secret</label>
+                <input
+                  name="cloudinary_api_secret"
+                  type="password"
+                  defaultValue={creds.cloudinary_api_secret || ''}
+                  className="w-full p-2 border rounded-md"
+                />
+              </div>
+            </div>
+            <TestConnectionButton
+              testFn={testCloudinaryConnection}
+              label="Test Cloudinary Connection"
+              inputNames={{
+                cloudName: 'cloudinary_cloud_name',
+                apiKey: 'cloudinary_api_key',
+                apiSecret: 'cloudinary_api_secret'
+              }}
+            />
+          </section>
 
           <section className="bg-white border rounded-xl p-6 shadow-sm">
             <h2 className="text-xl font-semibold mb-4 text-green-700">Inbound Connectivity</h2>

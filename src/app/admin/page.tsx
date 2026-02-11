@@ -20,10 +20,10 @@ export default async function AdminDashboard() {
   
   // Basic stats
   const stats = await db.select({
-    userCount: sql`count(distinct ${users.id})`,
-    postCount: sql`count(distinct ${posts.id})`,
-    playlistCount: sql`count(distinct ${playlists.id})`,
-    channelCount: sql`count(distinct ${channels.id})`,
+    userCount: sql<number>`count(distinct ${users.id})`,
+    postCount: sql<number>`count(distinct ${posts.id})`,
+    playlistCount: sql<number>`count(distinct ${playlists.id})`,
+    channelCount: sql<number>`count(distinct ${channels.id})`,
   }).from(users)
     .leftJoin(posts, eq(users.id, posts.userId))
     .leftJoin(playlists, eq(users.id, playlists.userId))
