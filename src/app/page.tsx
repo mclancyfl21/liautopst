@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Share2 } from 'lucide-react';
 
 export default async function Home() {
-  const { inventory, queue } = await getPosts();
+  const { inventory } = await getPosts();
   const playlists = await getPlaylists();
   const channels = await getChannels();
 
@@ -32,7 +32,6 @@ export default async function Home() {
 
       <KanbanBoard 
         initialInventory={inventory} 
-        initialQueue={queue}
         playlists={playlists}
         initialChannels={channels}
       />

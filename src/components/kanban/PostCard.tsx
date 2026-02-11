@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Pencil, Trash2, Check, X, Image as ImageIcon, Upload, List, Send, Maximize2, Calendar, Clock } from 'lucide-react';
+import { Pencil, Trash2, Check, X, Image as ImageIcon, Upload, List, Send, Maximize2, Calendar, Clock, Link as LinkIcon } from 'lucide-react';
 import { updatePost, deletePost, postNow } from '@/lib/actions';
 
 interface Playlist {
@@ -21,11 +21,10 @@ interface PostCardProps {
 export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playlistId, scheduledAt, playlists = [] }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  
   const [editedContent, setEditedContent] = useState(content);
   const [editedImageUrl, setEditedImageUrl] = useState(imageUrl || '');
   const [editedPlaylistId, setEditedPlaylistId] = useState<number | null>(playlistId || null);
-  
-  // Split state for date and time to avoid finicky datetime-local pickers
   const [isScheduleEnabled, setIsScheduleEnabled] = useState(!!scheduledAt);
   const [tempDate, setTempDate] = useState<string>('');
   const [tempTime, setTempTime] = useState<string>('09:00');
@@ -33,9 +32,11 @@ export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playl
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize split values when editing starts
   useEffect(() => {
     if (isEditing) {
+      setEditedContent(content);
+      setEditedImageUrl(imageUrl || '');
+      setEditedPlaylistId(playlistId || null);
       if (scheduledAt) {
         const d = new Date(scheduledAt);
         setTempDate(d.toISOString().split('T')[0]);
@@ -43,11 +44,13 @@ export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playl
         setIsScheduleEnabled(true);
       } else {
         setIsScheduleEnabled(false);
-        setTempDate(new Date().toISOString().split('T')[0]);
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setTempDate(tomorrow.toISOString().split('T')[0]);
         setTempTime('09:00');
       }
     }
-  }, [isEditing, scheduledAt]);
+  }, [isEditing, content, imageUrl, playlistId, scheduledAt]);
 
   const handleSave = async () => {
     if (editedContent.trim() !== '') {
@@ -56,7 +59,7 @@ export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playl
         finalSchedule = new Date(`${tempDate}T${tempTime}`);
       }
       
-      await updatePost(id, editedContent, editedImageUrl || null, editedPlaylistId, finalSchedule);
+      await updatePost(id, editedContent, editedImageUrl.trim() || null, editedPlaylistId, finalSchedule);
       setIsEditing(false);
     }
   };
@@ -97,177 +100,223 @@ export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playl
 
   const currentPlaylist = playlists.find(p => p.id === playlistId);
 
-  const CardContent = () => (
+  return (
     <>
-      <div className={`${isMaximized ? 'w-full h-96' : 'w-full h-48'} relative overflow-hidden bg-gray-100`}>
-        {isEditing ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gray-50 border-b">
-            {editedImageUrl ? (
-              <img src={editedImageUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover opacity-30" />
-            ) : null}
-            <div className="relative z-10 flex flex-col items-center gap-2 text-center">
-              <button 
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-md border shadow-sm text-xs font-medium hover:bg-gray-50 disabled:opacity-50"
-              >
-                <Upload className="w-4 h-4" />
-                {isUploading ? 'Uploading...' : 'Change Image'}
+      {/* Standard Card View */}
+      <div className="bg-white border rounded-lg shadow-sm overflow-hidden flex flex-col w-full h-[320px] group relative border-gray-200 hover:border-blue-300 transition-all">
+        {/* Hover Actions */}
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <button onClick={() => setIsMaximized(true)} className="p-1.5 bg-white/95 hover:bg-white rounded-md shadow-sm border text-gray-600 hover:text-blue-600 transition-colors" title="View Details"><Maximize2 className="w-4 h-4" /></button>
+          <button onClick={() => setIsEditing(true)} className="p-1.5 bg-white/95 hover:bg-white rounded-md shadow-sm border text-gray-600 hover:text-blue-600 transition-colors" title="Edit Post"><Pencil className="w-4 h-4" /></button>
+          <button onClick={handleDelete} className="p-1.5 bg-white/95 hover:bg-white rounded-md shadow-sm border text-gray-600 hover:text-red-600 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={async () => { if (confirm('Post now?')) await postNow(id); }} className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm border border-blue-700 text-white transition-colors" title="Post Now"><Send className="w-4 h-4" /></button>
+        </div>
+
+        {/* Card Content */}
+        <div className="w-full h-32 relative overflow-hidden bg-gray-100 flex-shrink-0">
+          {imageUrl ? (
+            <img src={imageUrl} alt="Post Visual" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-300">
+              <ImageIcon className="w-10 h-10 opacity-20" />
+            </div>
+          )}
+        </div>
+        <div className="p-4 bg-white flex-grow flex flex-col gap-2 overflow-hidden">
+          <div className="flex justify-between items-start">
+            {currentPlaylist ? (
+              <div className="flex items-center gap-1 text-[10px] font-bold text-blue-600 uppercase tracking-widest truncate">
+                <List className="w-3 h-3" /> {currentPlaylist.name}
+              </div>
+            ) : <div />}
+            {scheduledAt && (
+              <div className="flex items-center gap-1 text-[9px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex-shrink-0">
+                <Calendar className="w-2.5 h-2.5" />
+                {new Date(scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+              </div>
+            )}
+          </div>
+          <p className="text-xs line-clamp-6 text-gray-800 whitespace-pre-wrap leading-relaxed">
+            {content}
+          </p>
+        </div>
+      </div>
+
+      {/* Edit Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300">
+            <div className="p-6 bg-gray-50 border-b flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-blue-600" /> Edit LinkedIn Post
+              </h2>
+              <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-6 h-6" />
               </button>
-              <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-              <div className="flex items-center gap-1 w-full max-w-[200px]">
-                <ImageIcon className="w-3 h-3 text-gray-400 shrink-0" />
-                <input 
-                  type="text"
-                  value={editedImageUrl}
-                  onChange={(e) => setEditedImageUrl(e.target.value)}
-                  placeholder="Or paste URL..."
-                  className="w-full text-[10px] p-1 border rounded outline-none focus:ring-1 focus:ring-blue-500 bg-white/80"
+            </div>
+
+            <div className="p-6 flex-grow overflow-y-auto space-y-6">
+              {/* Content Area */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Post Content</label>
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="w-full p-4 border-2 border-blue-50 rounded-xl text-sm outline-none focus:border-blue-500 bg-white min-h-[150px] shadow-inner"
+                  placeholder="What's the post about?"
+                  autoFocus
                 />
               </div>
-            </div>
-          </div>
-        ) : (
-          imageUrl && <img src={imageUrl} alt="Post Visual" className="w-full h-full object-cover" />
-        )}
-      </div>
-      
-      <div className={`p-4 bg-gray-50 flex-grow ${isMaximized ? 'overflow-y-auto' : ''}`}>
-        {isEditing ? (
-          <div className="flex flex-col gap-3">
-            <textarea
-              value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
-              className={`w-full p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white ${isMaximized ? 'min-h-[300px]' : 'min-h-[100px]'}`}
-              placeholder="Post content..."
-              autoFocus
-            />
-            
-            <div className="bg-white p-3 rounded-lg border shadow-inner space-y-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Playlist Assignment</label>
-                <div className="flex items-center gap-2">
-                  <List className="w-4 h-4 text-gray-400" />
-                  <select 
-                    value={editedPlaylistId || ''} 
-                    onChange={(e) => setEditedPlaylistId(e.target.value ? Number(e.target.value) : null)}
-                    className="flex-grow text-xs p-1.5 border rounded-md outline-none bg-gray-50 focus:bg-white transition-colors"
-                  >
-                    <option value="">None</option>
-                    {playlists.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
-                  </select>
+
+              {/* Image Management */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Media</label>
+                <div className="flex gap-4">
+                  <div className="w-32 h-32 rounded-lg border bg-gray-50 overflow-hidden flex-shrink-0 relative">
+                    {editedImageUrl ? (
+                      <>
+                        <img src={editedImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                        <button onClick={() => setEditedImageUrl('')} className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-md shadow-lg hover:bg-red-700 transition-colors"><Trash2 className="w-3 h-3" /></button>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon className="w-8 h-8 opacity-20" /></div>
+                    )}
+                  </div>
+                  <div className="flex-grow space-y-3">
+                    <button 
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="flex items-center justify-center gap-2 bg-white px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50 w-full transition-all"
+                    >
+                      <Upload className="w-4 h-4 text-blue-600" />
+                      {isUploading ? 'Uploading...' : 'Upload New Image'}
+                    </button>
+                    <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                    
+                    <div className="flex items-center gap-2 p-2 border rounded-xl bg-white">
+                      <LinkIcon className="w-4 h-4 text-gray-400" />
+                      <input 
+                        type="text"
+                        value={editedImageUrl}
+                        onChange={(e) => setEditedImageUrl(e.target.value)}
+                        placeholder="Or paste external image URL..."
+                        className="w-full text-xs outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="border-t pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-2">
-                    <Calendar className="w-3 h-3 text-orange-400" /> Precision Schedule
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-500">Enable</span>
+              {/* Settings Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Playlist</label>
+                  <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <List className="w-5 h-5 text-gray-400" />
+                    <select 
+                      value={editedPlaylistId || ''} 
+                      onChange={(e) => setEditedPlaylistId(e.target.value ? Number(e.target.value) : null)}
+                      className="flex-grow text-sm bg-transparent outline-none font-bold text-gray-700"
+                    >
+                      <option value="">No Playlist</option>
+                      {playlists.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Precision Schedule</label>
                     <input 
                       type="checkbox" 
                       checked={isScheduleEnabled}
                       onChange={(e) => setIsScheduleEnabled(e.target.checked)}
-                      className="w-4 h-4 accent-blue-600 cursor-pointer"
+                      className="w-4 h-4 accent-orange-600 cursor-pointer"
+                    />
+                  </div>
+                  <div className={`flex gap-2 p-2 rounded-xl border transition-all ${isScheduleEnabled ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
+                    <input 
+                      type="date" 
+                      value={tempDate}
+                      onChange={(e) => setTempDate(e.target.value)}
+                      disabled={!isScheduleEnabled}
+                      className="flex-1 bg-transparent p-1 text-sm outline-none font-medium"
+                    />
+                    <input 
+                      type="time" 
+                      value={tempTime}
+                      onChange={(e) => setTempTime(e.target.value)}
+                      disabled={!isScheduleEnabled}
+                      className="flex-1 bg-transparent p-1 text-sm outline-none font-medium"
                     />
                   </div>
                 </div>
-                
-                {isScheduleEnabled && (
-                  <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex items-center gap-1.5 p-1.5 border rounded bg-orange-50/20">
-                      <Calendar className="w-3 h-3 text-gray-400" />
-                      <input 
-                        type="date" 
-                        value={tempDate}
-                        onChange={(e) => setTempDate(e.target.value)}
-                        className="bg-transparent text-[10px] outline-none flex-grow"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1.5 p-1.5 border rounded bg-orange-50/20">
-                      <Clock className="w-3 h-3 text-gray-400" />
-                      <input 
-                        type="time" 
-                        value={tempTime}
-                        onChange={(e) => setTempTime(e.target.value)}
-                        className="bg-transparent text-[10px] outline-none flex-grow"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 mt-1 border-t">
+            <div className="p-6 bg-gray-50 border-t flex justify-end gap-3">
               <button 
                 onClick={() => setIsEditing(false)}
-                className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-red-500 transition-colors"
+                className="px-6 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors"
               >
-                <X className="w-4 h-4" /> Cancel
+                Discard Changes
               </button>
               <button 
                 onClick={handleSave}
-                className="flex items-center gap-1 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-bold transition-all shadow-sm"
+                className="flex items-center gap-2 px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg active:scale-95"
               >
-                <Check className="w-4 h-4" /> Save Post
+                <Check className="w-5 h-5" /> Update Post
               </button>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="flex justify-between items-start mb-2">
-              {currentPlaylist ? (
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 uppercase tracking-wider">
-                  <List className="w-3 h-3" /> {currentPlaylist.name}
-                </div>
-              ) : <div />}
-              
-              {scheduledAt && (
-                <div className="flex items-center gap-1 text-[9px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 uppercase">
-                  <Calendar className="w-2.5 h-2.5" />
-                  {new Date(scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                </div>
-              )}
-            </div>
-            <p className={`${isMaximized ? 'text-lg' : 'text-sm'} text-gray-800 whitespace-pre-wrap leading-relaxed`}>
-              {content}
-            </p>
-          </>
-        )}
-      </div>
-    </>
-  );
-
-  return (
-    <>
-      <div className="bg-white border rounded-lg shadow-sm overflow-hidden flex flex-col w-full max-w-sm mb-4 group relative">
-        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          {!isEditing && (
-            <>
-              <button onClick={() => setIsMaximized(true)} className="p-1.5 bg-white/90 hover:bg-white rounded-md shadow-sm border text-gray-600 hover:text-blue-600 transition-colors" title="Full Screen View"><Maximize2 className="w-4 h-4" /></button>
-              <button onClick={() => setIsEditing(true)} className="p-1.5 bg-white/90 hover:bg-white rounded-md shadow-sm border text-gray-600 hover:text-blue-600 transition-colors" title="Edit Card"><Pencil className="w-4 h-4" /></button>
-              <button onClick={handleDelete} className="p-1.5 bg-white/90 hover:bg-white rounded-md shadow-sm border text-gray-600 hover:text-red-600 transition-colors" title="Delete Card"><Trash2 className="w-4 h-4" /></button>
-              <button onClick={async () => { if (confirm('Post this to LinkedIn immediately?')) await postNow(id); }} className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm border border-blue-700 text-white transition-colors" title="Post Now"><Send className="w-4 h-4" /></button>
-            </>
-          )}
         </div>
-        <CardContent />
-      </div>
+      )}
 
+      {/* Maximize Modal (Read-only View) */}
       {isMaximized && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-200">
-            <button onClick={() => { setIsMaximized(false); setIsEditing(false); }} className="absolute top-4 right-4 p-2 bg-white/80 hover:bg-white rounded-full shadow-lg z-20 text-gray-500 hover:text-gray-800 transition-all"><X className="w-6 h-6" /></button>
-            <div className="flex flex-col h-full"><CardContent /></div>
-            <div className="p-4 bg-white border-t flex justify-between items-center">
-              <div className="flex gap-2">
-                {!isEditing && <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold transition-colors"><Pencil className="w-4 h-4" /> Edit Content</button>}
-                <button onClick={handleDelete} className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors"><Trash2 className="w-4 h-4" /> Delete</button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300">
+            <button onClick={() => setIsMaximized(false)} className="absolute top-4 right-4 p-2 bg-white/80 hover:bg-white rounded-full shadow-lg z-50 text-gray-500 hover:text-gray-800 transition-all"><X className="w-6 h-6" /></button>
+            
+            <div className="flex-grow overflow-y-auto">
+              <div className="w-full h-96 bg-gray-100 relative">
+                {imageUrl ? (
+                  <img src={imageUrl} alt="Post Visual" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon className="w-20 h-20 opacity-20" /></div>
+                )}
               </div>
-              {!isEditing && <button onClick={async () => { if (confirm('Post this to LinkedIn immediately?')) { await postNow(id); setIsMaximized(false); } }} className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-all shadow-md active:scale-95"><Send className="w-4 h-4" /> Post Now</button>}
+              <div className="p-8 space-y-6">
+                <div className="flex justify-between items-center border-b pb-4">
+                  {currentPlaylist ? (
+                    <div className="flex items-center gap-2 text-blue-600 font-bold uppercase tracking-[0.2em] text-sm">
+                      <List className="w-5 h-5" /> {currentPlaylist.name}
+                    </div>
+                  ) : <div />}
+                  {scheduledAt && (
+                    <div className="flex items-center gap-2 text-sm font-bold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-xl border border-orange-100">
+                      <Calendar className="w-4 h-4" /> Scheduled for {new Date(scheduledAt).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xl text-gray-800 whitespace-pre-wrap leading-relaxed">
+                  {content}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 border-t flex justify-between items-center">
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => { setIsMaximized(false); setIsEditing(true); }} 
+                  className="flex items-center gap-2 px-6 py-2.5 bg-white border rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
+                >
+                  <Pencil className="w-4 h-4 text-blue-600" /> Edit Content
+                </button>
+                <button onClick={handleDelete} className="flex items-center gap-2 px-6 py-2.5 bg-white border rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition-all shadow-sm"><Trash2 className="w-4 h-4" /> Delete</button>
+              </div>
+              <button onClick={async () => { if (confirm('Post now?')) { await postNow(id); setIsMaximized(false); } }} className="flex items-center gap-2 px-10 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg active:scale-95"><Send className="w-4 h-4" /> Post Now</button>
             </div>
           </div>
         </div>

@@ -22,15 +22,15 @@ async function markAsPosted(postId: number) {
 }
 
 export function initCronJobs() {
-  // Main Automation Loop - Runs every hour to check for scheduled distributions
+  // Main Automation Loop - Runs every hour to check for precision schedules and channel streams
   cron.schedule('0 * * * *', async () => {
     const now = new Date();
     
-    // 1. CRITICAL: Check for any posts (Queue or Inventory) with a specific scheduledAt time that has passed
+    // 1. CRITICAL: Check for any posts with a specific scheduledAt time that has passed
     const timeScheduledPosts = await db.select()
       .from(posts)
       .where(and(
-        eq(posts.status, 'inventory'), // We also check inventory for precision scheduling
+        eq(posts.status, 'inventory'),
         lte(posts.scheduledAt, now)
       ))
       .all();
@@ -48,6 +48,7 @@ export function initCronJobs() {
       console.log(`[CRON] Processing Channel: ${channel.name} (${channel.type})`);
       
       if (channel.type === 'playlist' && channel.playlistId) {
+        // Sequential Playlist Mode: Pick the oldest unposted post in the playlist
         const nextInPlaylist = await db.select()
           .from(posts)
           .where(and(
@@ -66,6 +67,7 @@ export function initCronJobs() {
       } 
       
       else if (channel.type === 'random') {
+        // Random Mode: Pick any eligible inventory item
         const eligiblePosts = await db.select()
           .from(posts)
           .where(and(
@@ -81,33 +83,6 @@ export function initCronJobs() {
           if (success) await markAsPosted(randomPost.id);
         }
       }
-    }
-  });
-
-  // Dedicated Daily Queue Runner (Daily at 10 AM)
-  cron.schedule('0 10 * * *', async () => {
-    const now = new Date();
-    console.log('[CRON] Checking Daily Queue...');
-    
-    // First, check if there's a post in the queue with a precision schedule for RIGHT NOW (handled by hourly, but for safety)
-    // Then fallback to the sequential queue order
-    
-    const nextInQueue = await db.select()
-      .from(posts)
-      .where(eq(posts.status, 'queued'))
-      .orderBy(asc(posts.scheduledAt), asc(posts.createdAt)) // Precision schedule first, then order
-      .limit(1)
-      .get();
-      
-    if (nextInQueue) {
-      // If it has a precision schedule in the future, don't post it yet as part of the daily batch
-      if (nextInQueue.scheduledAt && nextInQueue.scheduledAt > now) {
-         console.log(`[CRON] Next item in queue ${nextInQueue.id} has a future precision schedule, skipping daily batch.`);
-         return;
-      }
-
-      const success = await postToLinkedIn(nextInQueue);
-      if (success) await markAsPosted(nextInQueue.id);
     }
   });
 }

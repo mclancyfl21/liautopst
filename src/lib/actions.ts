@@ -10,8 +10,20 @@ export async function getChannels() {
   return await db.select().from(channels).all();
 }
 
-export async function createChannel(name: string, type: 'queue' | 'playlist' | 'random', playlistId?: number | null) {
-  await db.insert(channels).values({ name, type, playlistId }).run();
+export async function createChannel(
+  name: string, 
+  type: 'playlist' | 'random', 
+  playlistId?: number | null,
+  scheduleType: 'daily' | 'weekly' | 'monthly' = 'daily',
+  scheduledTime: string = '09:00'
+) {
+  await db.insert(channels).values({ 
+    name, 
+    type, 
+    playlistId,
+    scheduleType,
+    scheduledTime
+  }).run();
   revalidatePath('/');
 }
 
@@ -43,7 +55,6 @@ export async function updatePlaylist(id: number, name: string, description?: str
 }
 
 export async function deletePlaylist(id: number) {
-  // First, remove association from posts
   await db.update(posts)
     .set({ playlistId: null })
     .where(eq(posts.playlistId, id))
@@ -80,12 +91,11 @@ export async function getPosts() {
   
   return {
     inventory: allPosts.filter(p => p.status === 'inventory'),
-    queue: allPosts.filter(p => p.status === 'queued'),
     posted: allPosts.filter(p => p.status === 'posted'),
   };
 }
 
-export async function updatePostStatus(id: number, status: 'inventory' | 'queued' | 'posted' | 'archived') {
+export async function updatePostStatus(id: number, status: 'inventory' | 'posted' | 'archived') {
   await db.update(posts)
     .set({ status })
     .where(eq(posts.id, id))
@@ -113,13 +123,12 @@ export async function postNow(id: number) {
 
   console.log(`[ACTION] Posting immediate: ${post.id}`);
   
-  // Logic to call LinkedIn API would go here
-  
   await db.update(posts)
     .set({ 
       status: 'posted', 
       postedAt: new Date(),
-      playlistId: null 
+      playlistId: null,
+      scheduledAt: null
     })
     .where(eq(posts.id, id))
     .run();
