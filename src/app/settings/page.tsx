@@ -1,13 +1,22 @@
 import { getCredentials, updateCredential } from '@/lib/credential-actions';
 import Link from 'next/link';
 import { ArrowLeft, Share2 } from 'lucide-react';
+import { getSession } from '@/lib/auth';
+import { TestConnectionButton } from '@/components/settings/TestConnectionButton';
+import { testLinkedInConnection, testCloudinaryConnection } from '@/lib/connection-tests';
+import { getAiProviders } from '@/lib/ai-settings-actions';
+import { AiProviderList } from '@/components/settings/AiProviderList';
+
+export const runtime = 'nodejs';
 
 export default async function SettingsPage() {
   const creds = await getCredentials();
+  const session = await getSession();
+  const aiProviders = await getAiProviders();
 
   async function handleSubmit(formData: FormData) {
     'use server';
-    const keys = ['linkedin_client_id', 'linkedin_client_secret', 'linkedin_urn', 'openai_api_key', 'inbound_api_token', 'random_mode_active', 'cloudinary_cloud_name', 'cloudinary_api_key', 'cloudinary_api_secret'];
+    const keys = ['linkedin_client_id', 'linkedin_client_secret', 'linkedin_urn', 'inbound_api_token', 'random_mode_active', 'cloudinary_cloud_name', 'cloudinary_api_key', 'cloudinary_api_secret'];
     
     for (const key of keys) {
       const value = formData.get(key) as string;
@@ -28,7 +37,10 @@ export default async function SettingsPage() {
             <Share2 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">LinkedIn AutoPost</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-blue-600 font-bold uppercase text-xs tracking-wider">{session?.user?.companyName}</span>
+              <h1 className="text-2xl font-bold text-gray-900 leading-tight">LinkedIn AutoPost</h1>
+            </div>
             <p className="text-xs text-gray-500 font-medium">Settings</p>
           </div>
         </div>
@@ -40,7 +52,14 @@ export default async function SettingsPage() {
         </nav>
       </header>
 
-      <div className="max-w-4xl mx-auto px-8 pb-12">
+      <div className="max-w-4xl mx-auto px-8 pb-12 space-y-8">
+        <section className="bg-white border rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4 text-green-700 flex items-center gap-2">
+            AI Provider Configurations
+          </h2>
+          <AiProviderList providers={aiProviders} />
+        </section>
+
         <form action={handleSubmit} className="space-y-8">
           <section className="bg-white border rounded-xl p-6 shadow-sm">
             <h2 className="text-xl font-semibold mb-4 text-blue-700">LinkedIn OAuth Credentials</h2>
@@ -74,6 +93,7 @@ export default async function SettingsPage() {
                 />
               </div>
             </div>
+            <TestConnectionButton testFn={testLinkedInConnection} label="Test LinkedIn Connection" />
           </section>
 
           <section className="bg-white border rounded-xl p-6 shadow-sm">
@@ -125,20 +145,13 @@ export default async function SettingsPage() {
                 />
               </div>
             </div>
+            <TestConnectionButton testFn={testCloudinaryConnection} label="Test Cloudinary Connection" />
           </section>
 
           <section className="bg-white border rounded-xl p-6 shadow-sm">
-            <h2 className="text-xl font-semibold mb-4 text-green-700">AI & External APIs</h2>
+            <h2 className="text-xl font-semibold mb-4 text-green-700">Inbound Connectivity</h2>
+            
             <div className="grid gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">OpenAI API Key</label>
-                <input 
-                  name="openai_api_key"
-                  type="password" 
-                  defaultValue={creds.openai_api_key || ''}
-                  className="w-full p-2 border rounded-md"
-                />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Inbound API Token (Bearer)</label>
                 <input 

@@ -2,9 +2,13 @@ import { getPosts } from '@/lib/actions';
 import { PostCard } from '@/components/kanban/PostCard';
 import Link from 'next/link';
 import { Share2 } from 'lucide-react';
+import { getSession } from '@/lib/auth';
+
+export const runtime = 'nodejs';
 
 export default async function ArchivePage() {
   const { posted } = await getPosts();
+  const session = await getSession();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -14,7 +18,10 @@ export default async function ArchivePage() {
             <Share2 className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">LinkedIn AutoPost</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-blue-600 font-bold uppercase text-xs tracking-wider">{session?.user?.companyName}</span>
+              <h1 className="text-2xl font-bold text-gray-900 leading-tight">LinkedIn AutoPost</h1>
+            </div>
             <p className="text-xs text-gray-500 font-medium">Archive</p>
           </div>
         </div>

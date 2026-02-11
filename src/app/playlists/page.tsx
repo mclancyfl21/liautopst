@@ -2,9 +2,13 @@ import { getPlaylists, createPlaylist, updatePlaylist, deletePlaylist } from '@/
 import Link from 'next/link';
 import { Share2, ListPlus, ArrowLeft, Pencil, Trash2, X, Check } from 'lucide-react';
 import { PlaylistList } from '@/components/playlists/PlaylistList';
+import { getSession } from '@/lib/auth';
+
+export const runtime = 'nodejs';
 
 export default async function PlaylistsPage() {
   const allPlaylists = await getPlaylists();
+  const session = await getSession();
 
   async function handleCreate(formData: FormData) {
     'use server';
@@ -26,7 +30,10 @@ export default async function PlaylistsPage() {
             <Share2 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">Playlists</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-blue-600 font-bold uppercase text-xs tracking-wider">{session?.user?.companyName}</span>
+              <h1 className="text-2xl font-bold text-gray-900 leading-tight">Playlists</h1>
+            </div>
             <p className="text-xs text-gray-500 font-medium">Group and sequence your content</p>
           </div>
         </div>

@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { posts } from '@/db/schema';
+import { posts, users } from '@/db/schema';
 import { enforceEmojis } from '@/lib/utils/emoji-enforcement';
+import { eq } from 'drizzle-orm';
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   
-  // Basic token check - should be replaced with a real credential check from the DB later
-  const token = process.env.INBOUND_API_TOKEN || 'secret-token';
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const token = authHeader.split(' ')[1];
+  const user = await db.select().from(users).where(eq(users.apiToken, token)).get();
   
-  if (authHeader !== `Bearer ${token}`) {
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -23,6 +28,7 @@ export async function POST(req: NextRequest) {
     const processedContent = enforceEmojis(content);
 
     const [newPost] = await db.insert(posts).values({
+      userId: user.id,
       content: processedContent,
       imageUrl: imageUrl || null,
       status: 'inventory',
