@@ -9,33 +9,19 @@ interface LinkedInPostResult {
 
 export async function postToLinkedIn(content: string, imageUrl?: string | null): Promise<LinkedInPostResult> {
   const creds = await getCredentials();
-  const keys = Object.keys(creds);
-  console.log('[LINKEDIN_DEBUG] Available Credential Keys:', keys);
-  
-  const { linkedin_client_id, linkedin_access_token, linkedin_urn } = creds;
+  const { linkedin_access_token, linkedin_urn } = creds;
 
-  console.log('[LINKEDIN_DEBUG] Starting post process');
+  const accessToken = linkedin_access_token?.trim();
+
+  console.log('[LINKEDIN_DEBUG] Starting post process (REST API)');
   console.log('[LINKEDIN_DEBUG] URN:', linkedin_urn);
-  console.log('[LINKEDIN_DEBUG] Has Image:', !!imageUrl);
-  console.log('[LINKEDIN_DEBUG] Token Present:', !!linkedin_access_token);
-
-  if (!linkedin_access_token || !linkedin_urn) {
-    const missing = [];
-    if (!linkedin_access_token) missing.push('Access Token');
-    if (!linkedin_urn) missing.push('URN');
-    
-    console.error('[LINKEDIN_ERROR] Missing credentials in database:', missing.join(', '));
-    return { 
-      success: false, 
-      message: `LinkedIn configuration incomplete. Missing: ${missing.join(', ')}`,
-      debug: { hasToken: !!linkedin_access_token, hasUrn: !!linkedin_urn }
-    };
-  }
   
-  const accessToken = linkedin_access_token.trim();
+  if (!accessToken || !linkedin_urn) {
+    return { success: false, message: 'Missing token or URN' };
+  }
 
   try {
-    const body: any = {
+    const body = {
       author: linkedin_urn,
       commentary: content,
       visibility: 'PUBLIC',
@@ -48,27 +34,23 @@ export async function postToLinkedIn(content: string, imageUrl?: string | null):
     };
 
     if (imageUrl && imageUrl.startsWith('urn:li:')) {
-      body.content = {
+      (body as any).content = {
         media: {
           title: 'Post Image',
           id: imageUrl
         }
       };
-      console.log('[LINKEDIN_DEBUG] Image URN added to body');
-    } else if (imageUrl) {
-      console.log('[LINKEDIN_DEBUG] Image URL detected - skipping (LinkedIn requires Asset URNs for media)');
     }
 
     console.log('[LINKEDIN_DEBUG] Payload:', JSON.stringify(body, null, 2));
-    console.log('[LINKEDIN_DEBUG] Using Token (Masked):', accessToken.substring(0, 5) + '...' + accessToken.substring(accessToken.length - 5));
 
     const response = await fetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'LinkedIn-Version': '202401',
-        'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0'
+        'LinkedIn-Version': '202501',
+        'X-Restli-Protocol-Version': '2.0.0',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
     });

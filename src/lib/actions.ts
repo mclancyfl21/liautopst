@@ -167,7 +167,8 @@ export async function postNow(id: number) {
   const result = await postToLinkedIn(post.content, post.imageUrl);
   
   if (!result.success) {
-    console.error(`[ACTION_ERROR] LinkedIn post failed: ${result.message}`, result.debug);
+    console.error(`[ACTION_ERROR] LinkedIn post failed: ${result.message}`);
+    console.error(`[ACTION_DEBUG] Full Result:`, JSON.stringify(result, null, 2));
     throw new Error(`LinkedIn Error: ${result.message}`);
   }
 
