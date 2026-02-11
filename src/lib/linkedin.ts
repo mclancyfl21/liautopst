@@ -12,6 +12,7 @@ export async function postToLinkedIn(content: string, imageUrl?: string | null):
   const { linkedin_access_token, linkedin_urn } = creds;
 
   const accessToken = linkedin_access_token?.trim();
+  const version = '202601';
 
   console.log('[LINKEDIN_DEBUG] Starting post process (REST API)');
   console.log('[LINKEDIN_DEBUG] URN:', linkedin_urn);
@@ -20,8 +21,67 @@ export async function postToLinkedIn(content: string, imageUrl?: string | null):
     return { success: false, message: 'Missing token or URN' };
   }
 
+  let imageUrn: string | null = null;
+
   try {
-    const body = {
+    // 1. If imageUrl exists, handle the multi-step upload process
+    if (imageUrl) {
+      console.log('[LINKEDIN_DEBUG] Image detected. Starting upload workflow.');
+      
+      // A. Download image binary from Cloudinary
+      console.log('[LINKEDIN_DEBUG] Fetching image from Cloudinary:', imageUrl);
+      const imageRes = await fetch(imageUrl);
+      if (!imageRes.ok) throw new Error(`Failed to fetch image from Cloudinary: ${imageRes.statusText}`);
+      const imageBuffer = await imageRes.arrayBuffer();
+      console.log('[LINKEDIN_DEBUG] Image downloaded. Size:', imageBuffer.byteLength);
+
+      // B. Initialize upload on LinkedIn
+      console.log('[LINKEDIN_DEBUG] Initializing LinkedIn image upload');
+      const initRes = await fetch('https://api.linkedin.com/rest/images?action=initializeUpload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'LinkedIn-Version': version,
+          'Content-Type': 'application/json',
+          'X-Restli-Protocol-Version': '2.0.0'
+        },
+        body: JSON.stringify({
+          initializeUploadRequest: {
+            owner: linkedin_urn
+          }
+        })
+      });
+
+      if (!initRes.ok) {
+        const err = await initRes.text();
+        throw new Error(`LinkedIn Initialize Upload Error (${initRes.status}): ${err}`);
+      }
+
+      const initData = await initRes.json();
+      const uploadUrl = initData.value.uploadUrl;
+      imageUrn = initData.value.image;
+      console.log('[LINKEDIN_DEBUG] LinkedIn Image URN:', imageUrn);
+
+      // C. Upload binary to LinkedIn
+      console.log('[LINKEDIN_DEBUG] Uploading binary to LinkedIn');
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': imageRes.headers.get('content-type') || 'image/jpeg'
+        },
+        body: imageBuffer
+      });
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.text();
+        throw new Error(`LinkedIn Binary Upload Error (${uploadRes.status}): ${err}`);
+      }
+      console.log('[LINKEDIN_DEBUG] Binary upload successful');
+    }
+
+    // 2. Create the Post
+    const body: any = {
       author: linkedin_urn,
       commentary: content,
       visibility: 'PUBLIC',
@@ -33,22 +93,22 @@ export async function postToLinkedIn(content: string, imageUrl?: string | null):
       isReshareDisabledByAuthor: false
     };
 
-    if (imageUrl && imageUrl.startsWith('urn:li:')) {
-      (body as any).content = {
+    if (imageUrn) {
+      body.content = {
         media: {
           title: 'Post Image',
-          id: imageUrl
+          id: imageUrn
         }
       };
     }
 
-    console.log('[LINKEDIN_DEBUG] Payload:', JSON.stringify(body, null, 2));
+    console.log('[LINKEDIN_DEBUG] Creating post with payload:', JSON.stringify(body, null, 2));
 
     const response = await fetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'LinkedIn-Version': '202501',
+        'LinkedIn-Version': version,
         'X-Restli-Protocol-Version': '2.0.0',
         'Content-Type': 'application/json'
       },
@@ -60,8 +120,6 @@ export async function postToLinkedIn(content: string, imageUrl?: string | null):
       statusText: response.statusText,
       headers: Object.fromEntries(response.headers.entries())
     };
-
-    console.log('[LINKEDIN_DEBUG] Response Status:', response.status);
 
     if (response.ok) {
       const postId = response.headers.get('x-restli-id') || 'unknown';
@@ -77,7 +135,7 @@ export async function postToLinkedIn(content: string, imageUrl?: string | null):
       };
     }
   } catch (error: any) {
-    console.error('[LINKEDIN_CRITICAL_ERROR] Fetch failed:', error.message);
+    console.error('[LINKEDIN_CRITICAL_ERROR] Workflow failed:', error.message);
     return { 
       success: false, 
       message: `Critical Error: ${error.message}`, 
