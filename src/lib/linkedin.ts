@@ -60,11 +60,13 @@ export async function postToLinkedIn(content: string, imageUrl?: string | null):
     }
 
     console.log('[LINKEDIN_DEBUG] Payload:', JSON.stringify(body, null, 2));
+    console.log('[LINKEDIN_DEBUG] Using Token (Masked):', accessToken.substring(0, 5) + '...' + accessToken.substring(accessToken.length - 5));
 
     const response = await fetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        'LinkedIn-Version': '202401',
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0'
       },
