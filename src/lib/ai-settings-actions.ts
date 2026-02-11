@@ -4,13 +4,7 @@ import { db } from '@/db';
 import { aiProviders } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { getSession } from './auth';
-
-async function getTenantId() {
-  const session = await getSession();
-  if (!session) throw new Error('Unauthorized');
-  return session.user.tenantId;
-}
+import { getSession, getTenantId } from './auth';
 
 export async function getAiProviders() {
   const tenantId = await getTenantId();

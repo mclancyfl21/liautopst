@@ -74,6 +74,11 @@ export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playl
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image file is too large. Max size is 5MB.');
+      return;
+    }
+
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', file);

@@ -5,14 +5,8 @@ import { playlists, posts, channels } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { enforceEmojis } from './utils/emoji-enforcement';
 import { revalidatePath } from 'next/cache';
-import { getSession } from './auth';
+import { getSession, getTenantId } from './auth';
 import { postToLinkedIn } from './linkedin';
-
-async function getTenantId() {
-  const session = await getSession();
-  if (!session) throw new Error('Unauthorized');
-  return session.user.tenantId;
-}
 
 export async function getChannels() {
   const tenantId = await getTenantId();

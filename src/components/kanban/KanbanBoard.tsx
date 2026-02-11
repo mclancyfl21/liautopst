@@ -89,6 +89,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 let imageUrl = manualUrl || '';
 
                 if (imageFile && imageFile.size > 0) {
+                  if (imageFile.size > 5 * 1024 * 1024) {
+                    alert('Image file is too large. Max size is 5MB.');
+                    return;
+                  }
                   setIsUploading(true);
                   console.log('[UPLOAD] Starting file upload:', imageFile.name);
                   const uploadData = new FormData();
