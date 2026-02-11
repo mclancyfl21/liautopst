@@ -1,11 +1,12 @@
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
-import { getPosts, getPlaylists } from '@/lib/actions';
+import { getPosts, getPlaylists, getChannels } from '@/lib/actions';
 import Link from 'next/link';
 import { Share2 } from 'lucide-react';
 
 export default async function Home() {
   const { inventory, queue } = await getPosts();
   const playlists = await getPlaylists();
+  const channels = await getChannels();
 
   return (
     <main className="min-h-screen bg-white">
@@ -33,6 +34,7 @@ export default async function Home() {
         initialInventory={inventory} 
         initialQueue={queue}
         playlists={playlists}
+        initialChannels={channels}
       />
     </main>
   );
