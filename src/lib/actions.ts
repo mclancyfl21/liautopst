@@ -91,7 +91,13 @@ export async function addPostToPlaylist(postId: number, playlistId: number | nul
   revalidatePath('/');
 }
 
-export async function createPost(content: string, imageUrl?: string) {
+export async function createPost(
+  content: string, 
+  imageUrl?: string, 
+  scheduledAt?: Date | null, 
+  isScheduleActive: boolean = true,
+  playlistId?: number | null
+) {
   const userId = await getUserId();
   const processedContent = enforceEmojis(content);
   
@@ -100,6 +106,9 @@ export async function createPost(content: string, imageUrl?: string) {
     content: processedContent,
     imageUrl: imageUrl || null,
     status: 'inventory',
+    scheduledAt: scheduledAt || null,
+    isScheduleActive,
+    playlistId: playlistId || null,
   }).run();
 
   revalidatePath('/');
@@ -124,7 +133,14 @@ export async function updatePostStatus(id: number, status: 'inventory' | 'posted
   revalidatePath('/');
 }
 
-export async function updatePost(id: number, content: string, imageUrl?: string | null, playlistId?: number | null, scheduledAt?: Date | null) {
+export async function updatePost(
+  id: number, 
+  content: string, 
+  imageUrl?: string | null, 
+  playlistId?: number | null, 
+  scheduledAt?: Date | null,
+  isScheduleActive?: boolean
+) {
   const userId = await getUserId();
   const processedContent = enforceEmojis(content);
   await db.update(posts)
@@ -132,7 +148,8 @@ export async function updatePost(id: number, content: string, imageUrl?: string 
       content: processedContent,
       imageUrl: imageUrl === undefined ? undefined : imageUrl,
       playlistId: playlistId === undefined ? undefined : playlistId,
-      scheduledAt: scheduledAt === undefined ? undefined : scheduledAt
+      scheduledAt: scheduledAt === undefined ? undefined : scheduledAt,
+      isScheduleActive: isScheduleActive === undefined ? undefined : isScheduleActive
     })
     .where(and(eq(posts.id, id), eq(posts.userId, userId)))
     .run();

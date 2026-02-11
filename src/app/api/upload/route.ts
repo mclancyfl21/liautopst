@@ -30,9 +30,16 @@ export async function POST(req: NextRequest) {
       cloudinary.uploader.upload_stream(
         { folder: 'liautopost' },
         (error, result) => {
-          if (error) reject(error);
-          else if (!result) reject(new Error('Upload failed: No result from Cloudinary'));
-          else resolve(result as { secure_url: string });
+          if (error) {
+            console.error('[CLOUDINARY] Stream Error:', error);
+            reject(error);
+          } else if (!result) {
+            console.error('[CLOUDINARY] No Result');
+            reject(new Error('Upload failed: No result from Cloudinary'));
+          } else {
+            console.log('[CLOUDINARY] Upload Success:', result.secure_url);
+            resolve(result as { secure_url: string });
+          }
         }
       ).end(buffer);
     });

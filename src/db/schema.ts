@@ -41,6 +41,7 @@ export const posts = sqliteTable('posts', {
   scheduledAt: integer('scheduled_at', { mode: 'timestamp' }),
   scheduledFor: integer('scheduled_for', { mode: 'timestamp' }), // Legacy
   postedAt: integer('posted_at', { mode: 'timestamp' }),
+  isScheduleActive: integer('is_schedule_active', { mode: 'boolean' }).default(true),
   isRandomModeEligible: integer('is_random_mode_eligible', { mode: 'boolean' }).default(true),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
 });

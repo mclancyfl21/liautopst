@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 interface TestConnectionButtonProps {
-  testFn: () => Promise<{ success: boolean; message: string }>;
+  testFn: (args?: any) => Promise<{ success: boolean; message: string }>;
   label?: string;
+  inputNames?: Record<string, string>; // { argName: inputName }
 }
 
-export function TestConnectionButton({ testFn, label = 'Test Connection' }: TestConnectionButtonProps) {
+export function TestConnectionButton({ testFn, label = 'Test Connection', inputNames }: TestConnectionButtonProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
@@ -18,7 +19,19 @@ export function TestConnectionButton({ testFn, label = 'Test Connection' }: Test
     setMessage('');
 
     try {
-      const result = await testFn();
+      let args: any = undefined;
+      
+      if (inputNames) {
+        args = {};
+        for (const [argName, inputName] of Object.entries(inputNames)) {
+          const input = document.querySelector(`[name="${inputName}"]`) as HTMLInputElement | HTMLSelectElement;
+          if (input) {
+            args[argName] = input.value;
+          }
+        }
+      }
+
+      const result = await testFn(args);
       if (result.success) {
         setStatus('success');
         setMessage(result.message);

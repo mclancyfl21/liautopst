@@ -26,12 +26,13 @@ export function initCronJobs() {
   cron.schedule('0 * * * *', async () => {
     const now = new Date();
     
-    // 1. CRITICAL: Check for any posts with a specific scheduledAt time that has passed
+    // 1. CRITICAL: Check for any posts with a specific scheduledAt time that has passed AND are active
     const timeScheduledPosts = await db.select()
       .from(posts)
       .where(and(
         eq(posts.status, 'inventory'),
-        lte(posts.scheduledAt, now)
+        lte(posts.scheduledAt, now),
+        eq(posts.isScheduleActive, true)
       ))
       .all();
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { PostCard } from './PostCard';
 import { updatePostStatus, createPost, createChannel, deleteChannel, toggleChannel } from '@/lib/actions';
-import { Plus, Image as ImageIcon, Radio, Settings2, Power, Trash2, Clock, CalendarDays } from 'lucide-react';
+import { Plus, Image as ImageIcon, Radio, Settings2, Power, Trash2, Clock, CalendarDays, List } from 'lucide-react';
 
 interface Post {
   id: number;
@@ -13,6 +13,7 @@ interface Post {
   status: string;
   playlistId?: number | null;
   scheduledAt?: Date | null;
+  isScheduleActive: boolean | null;
 }
 
 interface Playlist {
@@ -45,6 +46,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [channels, setChannels] = useState(initialChannels);
   const [isAddingPost, setIsAddingPost] = useState(false);
   const [isAddingChannel, setIsAddingChannel] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     setInventory(initialInventory);
@@ -69,7 +72,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         <div className="flex-[2] flex flex-col bg-gray-100 rounded-xl p-4 min-w-[400px]">
           <div className="flex justify-between items-center mb-4 px-2">
             <h2 className="text-xl font-bold flex items-center gap-2">📦 Inventory Pool</h2>
-            <button onClick={() => setIsAddingPost(!isAddingPost)} className="p-1 hover:bg-gray-200 rounded-full transition-colors">
+            <button onClick={() => { setIsAddingPost(!isAddingPost); setSelectedFileName(null); }} className="p-1 hover:bg-gray-200 rounded-full transition-colors">
               <Plus className={`w-7 h-7 ${isAddingPost ? 'rotate-45 text-red-500' : 'text-blue-600'}`} />
             </button>
           </div>
@@ -80,29 +83,94 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 const content = formData.get('content') as string;
                 const imageFile = formData.get('imageFile') as File;
                 const manualUrl = formData.get('imageUrl') as string;
+                const scheduledAtStr = formData.get('scheduledAt') as string;
+                const isScheduleActive = formData.get('isScheduleActive') === 'on';
+                const playlistId = formData.get('playlistId') ? Number(formData.get('playlistId')) : null;
                 let imageUrl = manualUrl || '';
 
                 if (imageFile && imageFile.size > 0) {
+                  setIsUploading(true);
+                  console.log('[UPLOAD] Starting file upload:', imageFile.name);
                   const uploadData = new FormData();
                   uploadData.append('file', imageFile);
-                  const res = await fetch('/api/upload', { method: 'POST', body: uploadData });
-                  if (res.ok) { const data = await res.json(); imageUrl = data.url; }
+                  
+                  try {
+                    const res = await fetch('/api/upload', { method: 'POST', body: uploadData });
+                    if (res.ok) { 
+                      const data = await res.json(); 
+                      imageUrl = data.url; 
+                      console.log('[UPLOAD] Success, URL:', imageUrl);
+                    } else {
+                      console.error('[UPLOAD] Failed with status:', res.status);
+                    }
+                  } catch (err) {
+                    console.error('[UPLOAD] Request error:', err);
+                  } finally {
+                    setIsUploading(false);
+                  }
                 }
 
-                if (content) { await createPost(content, imageUrl); setIsAddingPost(false); }
+                const scheduledAt = scheduledAtStr ? new Date(scheduledAtStr) : null;
+
+                if (content) { 
+                  console.log('[CREATE_POST] Submitting with image:', imageUrl);
+                  await createPost(content, imageUrl, scheduledAt, isScheduleActive, playlistId); 
+                  setIsAddingPost(false); 
+                  setSelectedFileName(null);
+                }
               }}
               className="bg-white p-5 rounded-xl shadow-lg mb-8 border-2 border-blue-100 animate-in fade-in slide-in-from-top-2"
             >
               <textarea name="content" placeholder="Compose your LinkedIn post..." className="w-full p-3 border rounded-md text-sm min-h-[120px] mb-4 outline-none focus:ring-2 focus:ring-blue-500" required />
+              
+              <div className="flex flex-col gap-3 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-md border border-gray-200 flex-grow">
+                    <CalendarDays className="w-4 h-4 text-blue-500" />
+                    <input 
+                      name="scheduledAt" 
+                      type="datetime-local" 
+                      className="bg-transparent text-xs outline-none flex-grow text-gray-600 font-medium" 
+                      title="Schedule precise post time"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer bg-gray-50 px-3 py-2 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors">
+                    <input name="isScheduleActive" type="checkbox" defaultChecked className="hidden peer" />
+                    <Power className="w-4 h-4 text-gray-400 peer-checked:text-green-600 transition-colors" />
+                    <span className="text-[10px] font-bold text-gray-500 peer-checked:text-green-700 uppercase tracking-tight">Active</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-md border border-gray-200">
+                  <List className="w-4 h-4 text-blue-500" />
+                  <select name="playlistId" className="bg-transparent text-xs outline-none flex-grow text-gray-600 font-medium appearance-none">
+                    <option value="">No Playlist (General Inventory)</option>
+                    {playlists.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
               <div className="space-y-3 mb-6">
                 <label className="flex items-center gap-2 cursor-pointer bg-gray-50 hover:bg-gray-100 p-3 rounded-md border border-dashed border-gray-300 transition-colors w-full">
                   <ImageIcon className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-500">Attach Media File</span>
-                  <input name="imageFile" type="file" accept="image/*" className="hidden" />
+                  <span className="text-sm text-gray-500">{selectedFileName || 'Attach Media File'}</span>
+                  <input 
+                    name="imageFile" 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={(e) => setSelectedFileName(e.target.files?.[0]?.name || null)}
+                  />
                 </label>
                 <input name="imageUrl" type="text" placeholder="Or paste image URL..." className="w-full p-2 border rounded-md text-xs outline-none focus:ring-1 focus:ring-blue-500" />
               </div>
-              <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md">Add to Pool</button>
+              <button 
+                type="submit" 
+                disabled={isUploading}
+                className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUploading ? 'Uploading Image...' : 'Add to Pool'}
+              </button>
             </form>
           )}
 
@@ -119,6 +187,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           imageUrl={post.imageUrl} 
                           playlistId={post.playlistId}
                           scheduledAt={post.scheduledAt}
+                          isScheduleActive={post.isScheduleActive ?? true}
                           playlists={playlists}
                         />
                       </div>

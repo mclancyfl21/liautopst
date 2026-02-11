@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Pencil, Trash2, Check, X, Image as ImageIcon, Upload, List, Send, Maximize2, Calendar, Clock, Link as LinkIcon } from 'lucide-react';
+import { Pencil, Trash2, Check, X, Image as ImageIcon, Upload, List, Send, Maximize2, Calendar, Clock, Link as LinkIcon, Power } from 'lucide-react';
 import { updatePost, deletePost, postNow } from '@/lib/actions';
 
 interface Playlist {
@@ -15,17 +15,18 @@ interface PostCardProps {
   imageUrl?: string | null;
   playlistId?: number | null;
   scheduledAt?: Date | null;
+  isScheduleActive?: boolean;
   playlists?: Playlist[];
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playlistId, scheduledAt, playlists = [] }) => {
+export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playlistId, scheduledAt, isScheduleActive, playlists = [] }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   
   const [editedContent, setEditedContent] = useState(content);
   const [editedImageUrl, setEditedImageUrl] = useState(imageUrl || '');
   const [editedPlaylistId, setEditedPlaylistId] = useState<number | null>(playlistId || null);
-  const [isScheduleEnabled, setIsScheduleEnabled] = useState(!!scheduledAt);
+  const [isScheduleEnabled, setIsScheduleEnabled] = useState(isScheduleActive ?? !!scheduledAt);
   const [tempDate, setTempDate] = useState<string>('');
   const [tempTime, setTempTime] = useState<string>('09:00');
   
@@ -37,29 +38,28 @@ export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playl
       setEditedContent(content);
       setEditedImageUrl(imageUrl || '');
       setEditedPlaylistId(playlistId || null);
+      setIsScheduleEnabled(isScheduleActive ?? !!scheduledAt);
       if (scheduledAt) {
         const d = new Date(scheduledAt);
         setTempDate(d.toISOString().split('T')[0]);
         setTempTime(d.toTimeString().slice(0, 5));
-        setIsScheduleEnabled(true);
       } else {
-        setIsScheduleEnabled(false);
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         setTempDate(tomorrow.toISOString().split('T')[0]);
         setTempTime('09:00');
       }
     }
-  }, [isEditing, content, imageUrl, playlistId, scheduledAt]);
+  }, [isEditing, content, imageUrl, playlistId, scheduledAt, isScheduleActive]);
 
   const handleSave = async () => {
     if (editedContent.trim() !== '') {
       let finalSchedule: Date | null = null;
-      if (isScheduleEnabled && tempDate && tempTime) {
+      if (tempDate && tempTime) {
         finalSchedule = new Date(`${tempDate}T${tempTime}`);
       }
       
-      await updatePost(id, editedContent, editedImageUrl.trim() || null, editedPlaylistId, finalSchedule);
+      await updatePost(id, editedContent, editedImageUrl.trim() || null, editedPlaylistId, finalSchedule, isScheduleEnabled);
       setIsEditing(false);
     }
   };
@@ -130,9 +130,12 @@ export const PostCard: React.FC<PostCardProps> = ({ id, content, imageUrl, playl
               </div>
             ) : <div />}
             {scheduledAt && (
-              <div className="flex items-center gap-1 text-[9px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 flex-shrink-0">
+              <div className={`flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 ${
+                isScheduleActive ? 'text-orange-600 bg-orange-50 border-orange-100' : 'text-gray-400 bg-gray-50 border-gray-200 grayscale'
+              }`}>
                 <Calendar className="w-2.5 h-2.5" />
                 {new Date(scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                {!isScheduleActive && <Power className="w-2 h-2 ml-0.5" />}
               </div>
             )}
           </div>

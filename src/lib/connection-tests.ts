@@ -13,18 +13,32 @@ async function getUserId() {
   return session.user.id;
 }
 
-export async function testCloudinaryConnection() {
-  const creds = await getCredentials();
+export async function testCloudinaryConnection(provided?: { cloudName?: string, apiKey?: string, apiSecret?: string }) {
+  let config = provided;
+
+  if (!config || !config.cloudName || !config.apiKey || !config.apiSecret) {
+    const creds = await getCredentials();
+    config = {
+      cloudName: provided?.cloudName || creds.cloudinary_cloud_name,
+      apiKey: provided?.apiKey || creds.cloudinary_api_key,
+      apiSecret: provided?.apiSecret || creds.cloudinary_api_secret,
+    };
+  }
   
-  if (!creds.cloudinary_cloud_name || !creds.cloudinary_api_key || !creds.cloudinary_api_secret) {
-    return { success: false, message: 'Missing Cloudinary credentials' };
+  const missing = [];
+  if (!config.cloudName) missing.push('Cloud Name');
+  if (!config.apiKey) missing.push('API Key');
+  if (!config.apiSecret) missing.push('API Secret');
+
+  if (missing.length > 0) {
+    return { success: false, message: `Missing: ${missing.join(', ')}` };
   }
 
   try {
     cloudinary.config({
-      cloud_name: creds.cloudinary_cloud_name,
-      api_key: creds.cloudinary_api_key,
-      api_secret: creds.cloudinary_api_secret,
+      cloud_name: config.cloudName,
+      api_key: config.apiKey,
+      api_secret: config.apiSecret,
     });
 
     // Simple ping to test connection
@@ -36,17 +50,24 @@ export async function testCloudinaryConnection() {
   }
 }
 
-export async function testLinkedInConnection() {
-  const creds = await getCredentials();
+export async function testLinkedInConnection(provided?: { clientId?: string, clientSecret?: string, urn?: string }) {
+  let config = provided;
 
-  if (!creds.linkedin_client_id || !creds.linkedin_client_secret || !creds.linkedin_urn) {
+  if (!config || !config.clientId || !config.clientSecret || !config.urn) {
+    const creds = await getCredentials();
+    config = {
+      clientId: provided?.clientId || creds.linkedin_client_id,
+      clientSecret: provided?.clientSecret || creds.linkedin_client_secret,
+      urn: provided?.urn || creds.linkedin_urn,
+    };
+  }
+
+  if (!config.clientId || !config.clientSecret || !config.urn) {
     return { success: false, message: 'Missing LinkedIn credentials' };
   }
 
-  // Placeholder for LinkedIn OAuth validation
-  // Real validation would require an access token flow
   try {
-    const isUrnValid = creds.linkedin_urn.startsWith('urn:li:organization:');
+    const isUrnValid = config.urn.startsWith('urn:li:organization:');
     if (!isUrnValid) {
       return { success: false, message: 'Invalid LinkedIn URN format' };
     }
