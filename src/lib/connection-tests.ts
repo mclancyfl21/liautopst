@@ -7,10 +7,10 @@ import { aiProviders } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSession } from './auth';
 
-async function getUserId() {
+async function getTenantId() {
   const session = await getSession();
   if (!session) throw new Error('Unauthorized');
-  return session.user.id;
+  return session.user.tenantId;
 }
 
 export async function testCloudinaryConnection(provided?: { cloudName?: string, apiKey?: string, apiSecret?: string }) {
@@ -80,8 +80,8 @@ export async function testLinkedInConnection(provided?: { clientId?: string, cli
 }
 
 export async function testAiProviderConnection(id: number) {
-  const userId = await getUserId();
-  const provider = await db.select().from(aiProviders).where(and(eq(aiProviders.id, id), eq(aiProviders.userId, userId))).get();
+  const tenantId = await getTenantId();
+  const provider = await db.select().from(aiProviders).where(and(eq(aiProviders.id, id), eq(aiProviders.tenantId, tenantId))).get();
   
   if (!provider) return { success: false, message: 'Provider not found' };
 

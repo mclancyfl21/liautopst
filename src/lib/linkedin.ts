@@ -7,8 +7,8 @@ interface LinkedInPostResult {
   debug?: any;
 }
 
-export async function postToLinkedIn(content: string, imageUrl?: string | null): Promise<LinkedInPostResult> {
-  const creds = await getCredentials();
+export async function postToLinkedIn(content: string, imageUrl?: string | null, tenantId?: number): Promise<LinkedInPostResult> {
+  const creds = await getCredentials(tenantId);
   const { linkedin_access_token, linkedin_urn } = creds;
 
   const accessToken = linkedin_access_token?.trim();

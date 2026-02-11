@@ -6,15 +6,15 @@ import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getSession } from './auth';
 
-async function getUserId() {
+async function getTenantId() {
   const session = await getSession();
   if (!session) throw new Error('Unauthorized');
-  return session.user.id;
+  return session.user.tenantId;
 }
 
-export async function getCredentials() {
-  const userId = await getUserId();
-  const creds = await db.select().from(credentials).where(eq(credentials.userId, userId)).all();
+export async function getCredentials(providedTenantId?: number) {
+  const tenantId = providedTenantId || await getTenantId();
+  const creds = await db.select().from(credentials).where(eq(credentials.tenantId, tenantId)).all();
   return creds.reduce((acc, curr) => {
     acc[curr.key] = curr.value;
     return acc;
@@ -22,13 +22,13 @@ export async function getCredentials() {
 }
 
 export async function updateCredential(key: string, value: string) {
-  const userId = await getUserId();
-  const existing = await db.select().from(credentials).where(and(eq(credentials.key, key), eq(credentials.userId, userId))).get();
+  const tenantId = await getTenantId();
+  const existing = await db.select().from(credentials).where(and(eq(credentials.key, key), eq(credentials.tenantId, tenantId))).get();
   
   if (existing) {
-    await db.update(credentials).set({ value, updatedAt: new Date() }).where(and(eq(credentials.key, key), eq(credentials.userId, userId))).run();
+    await db.update(credentials).set({ value, updatedAt: new Date() }).where(and(eq(credentials.key, key), eq(credentials.tenantId, tenantId))).run();
   } else {
-    await db.insert(credentials).values({ userId, key, value }).run();
+    await db.insert(credentials).values({ tenantId, key, value }).run();
   }
   
   revalidatePath('/settings');

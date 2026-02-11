@@ -6,26 +6,26 @@ import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getSession } from './auth';
 
-async function getUserId() {
+async function getTenantId() {
   const session = await getSession();
   if (!session) throw new Error('Unauthorized');
-  return session.user.id;
+  return session.user.tenantId;
 }
 
 export async function getAiProviders() {
-  const userId = await getUserId();
-  return await db.select().from(aiProviders).where(eq(aiProviders.userId, userId)).all();
+  const tenantId = await getTenantId();
+  return await db.select().from(aiProviders).where(eq(aiProviders.tenantId, tenantId)).all();
 }
 
 export async function createAiProvider(name: string, endpoint: string, apiKey: string | null, model: string, systemPrompt?: string, userPrompt?: string) {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   
   // Check if this is the first provider, if so make it active
-  const existing = await db.select().from(aiProviders).where(eq(aiProviders.userId, userId)).all();
+  const existing = await db.select().from(aiProviders).where(eq(aiProviders.tenantId, tenantId)).all();
   const isActive = existing.length === 0;
 
   await db.insert(aiProviders).values({
-    userId,
+    tenantId,
     name,
     endpoint,
     apiKey,
@@ -39,23 +39,23 @@ export async function createAiProvider(name: string, endpoint: string, apiKey: s
 }
 
 export async function deleteAiProvider(id: number) {
-  const userId = await getUserId();
-  await db.delete(aiProviders).where(and(eq(aiProviders.id, id), eq(aiProviders.userId, userId))).run();
+  const tenantId = await getTenantId();
+  await db.delete(aiProviders).where(and(eq(aiProviders.id, id), eq(aiProviders.tenantId, tenantId))).run();
   revalidatePath('/settings');
 }
 
 export async function setActiveAiProvider(id: number) {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   
   // Transaction-like logic: Set all to inactive, then set specific one to active
   await db.update(aiProviders)
     .set({ isActive: false })
-    .where(eq(aiProviders.userId, userId))
+    .where(eq(aiProviders.tenantId, tenantId))
     .run();
 
   await db.update(aiProviders)
     .set({ isActive: true })
-    .where(and(eq(aiProviders.id, id), eq(aiProviders.userId, userId)))
+    .where(and(eq(aiProviders.id, id), eq(aiProviders.tenantId, tenantId)))
     .run();
 
   revalidatePath('/settings');

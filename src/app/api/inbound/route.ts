@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const processedContent = enforceEmojis(content);
 
     const [newPost] = await db.insert(posts).values({
-      userId: user.id,
+      tenantId: user.tenantId,
       content: processedContent,
       imageUrl: imageUrl || null,
       status: 'inventory',

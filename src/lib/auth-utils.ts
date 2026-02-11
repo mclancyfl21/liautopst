@@ -5,6 +5,7 @@ const key = new TextEncoder().encode(secretKey);
 
 export interface SessionUser {
   id: number;
+  tenantId: number;
   email: string;
   role: string;
   companyName: string;

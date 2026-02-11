@@ -1,11 +1,17 @@
 import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
+export const tenants = sqliteTable('tenants', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
+});
+
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
   email: text('email').unique().notNull(),
   password: text('password').notNull(), // Hashed
-  companyName: text('company_name').notNull(),
   role: text('role').default('admin').notNull(), // 'admin', 'superadmin'
   apiToken: text('api_token').unique(),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
@@ -13,7 +19,7 @@ export const users = sqliteTable('users', {
 
 export const playlists = sqliteTable('playlists', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').references(() => users.id).notNull(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
   name: text('name').notNull(),
   description: text('description'),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
@@ -21,7 +27,7 @@ export const playlists = sqliteTable('playlists', {
 
 export const channels = sqliteTable('channels', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').references(() => users.id).notNull(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
   name: text('name').notNull(),
   type: text('type').notNull(), // 'playlist', 'random'
   playlistId: integer('playlist_id').references(() => playlists.id),
@@ -33,7 +39,7 @@ export const channels = sqliteTable('channels', {
 
 export const posts = sqliteTable('posts', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').references(() => users.id).notNull(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
   content: text('content').notNull(),
   imageUrl: text('image_url'),
   status: text('status').default('inventory').notNull(), // 'inventory', 'posted', 'archived'
@@ -48,7 +54,7 @@ export const posts = sqliteTable('posts', {
 
 export const credentials = sqliteTable('credentials', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').references(() => users.id).notNull(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
   key: text('key').notNull(), // Removed unique constraint to allow per-user keys
   value: text('value').notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(strftime('%s', 'now'))`),
@@ -56,7 +62,7 @@ export const credentials = sqliteTable('credentials', {
 
 export const aiProviders = sqliteTable('ai_providers', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').references(() => users.id).notNull(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
   name: text('name').notNull(),
   endpoint: text('endpoint').notNull(),
   apiKey: text('api_key'),

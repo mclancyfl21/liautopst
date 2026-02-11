@@ -7,7 +7,7 @@ import { postToLinkedIn as liPost } from './linkedin';
 type Post = typeof posts.$inferSelect;
 
 async function postToLinkedIn(post: Post) {
-  const result = await liPost(post.content, post.imageUrl);
+  const result = await liPost(post.content, post.imageUrl, post.tenantId);
   return result.success;
 }
 
@@ -39,7 +39,7 @@ export function initCronJobs() {
       .all();
 
     for (const post of timeScheduledPosts) {
-      console.log(`[CRON] Processing precision scheduled post: ${post.id}`);
+      console.log(`[CRON] Processing precision scheduled post: ${post.id} (Tenant: ${post.tenantId})`);
       const success = await postToLinkedIn(post);
       if (success) await markAsPosted(post.id);
     }
@@ -48,13 +48,14 @@ export function initCronJobs() {
     const activeChannels = await db.select().from(channels).where(eq(channels.isActive, true)).all();
     
     for (const channel of activeChannels) {
-      console.log(`[CRON] Processing Channel: ${channel.name} (${channel.type})`);
+      console.log(`[CRON] Processing Channel: ${channel.name} (${channel.type}) for Tenant: ${channel.tenantId}`);
       
       if (channel.type === 'playlist' && channel.playlistId) {
         // Sequential Playlist Mode: Pick the oldest unposted post in the playlist
         const nextInPlaylist = await db.select()
           .from(posts)
           .where(and(
+            eq(posts.tenantId, channel.tenantId),
             eq(posts.playlistId, channel.playlistId),
             eq(posts.status, 'inventory'),
             isNull(posts.scheduledAt) // Don't steal precision scheduled posts
@@ -74,6 +75,7 @@ export function initCronJobs() {
         const eligiblePosts = await db.select()
           .from(posts)
           .where(and(
+            eq(posts.tenantId, channel.tenantId),
             eq(posts.status, 'inventory'),
             eq(posts.isRandomModeEligible, true),
             isNull(posts.scheduledAt)

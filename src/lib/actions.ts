@@ -8,15 +8,15 @@ import { revalidatePath } from 'next/cache';
 import { getSession } from './auth';
 import { postToLinkedIn } from './linkedin';
 
-async function getUserId() {
+async function getTenantId() {
   const session = await getSession();
   if (!session) throw new Error('Unauthorized');
-  return session.user.id;
+  return session.user.tenantId;
 }
 
 export async function getChannels() {
-  const userId = await getUserId();
-  return await db.select().from(channels).where(eq(channels.userId, userId)).all();
+  const tenantId = await getTenantId();
+  return await db.select().from(channels).where(eq(channels.tenantId, tenantId)).all();
 }
 
 export async function createChannel(
@@ -26,9 +26,9 @@ export async function createChannel(
   scheduleType: 'daily' | 'weekly' | 'monthly' = 'daily',
   scheduledTime: string = '09:00'
 ) {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   await db.insert(channels).values({ 
-    userId,
+    tenantId,
     name, 
     type, 
     playlistId,
@@ -39,55 +39,55 @@ export async function createChannel(
 }
 
 export async function deleteChannel(id: number) {
-  const userId = await getUserId();
-  await db.delete(channels).where(and(eq(channels.id, id), eq(channels.userId, userId))).run();
+  const tenantId = await getTenantId();
+  await db.delete(channels).where(and(eq(channels.id, id), eq(channels.tenantId, tenantId))).run();
   revalidatePath('/');
 }
 
 export async function toggleChannel(id: number, isActive: boolean) {
-  const userId = await getUserId();
-  await db.update(channels).set({ isActive }).where(and(eq(channels.id, id), eq(channels.userId, userId))).run();
+  const tenantId = await getTenantId();
+  await db.update(channels).set({ isActive }).where(and(eq(channels.id, id), eq(channels.tenantId, tenantId))).run();
   revalidatePath('/');
 }
 
 export async function createPlaylist(name: string, description?: string) {
-  const userId = await getUserId();
-  await db.insert(playlists).values({ userId, name, description }).run();
+  const tenantId = await getTenantId();
+  await db.insert(playlists).values({ tenantId, name, description }).run();
   revalidatePath('/playlists');
 }
 
 export async function getPlaylists() {
-  const userId = await getUserId();
-  return await db.select().from(playlists).where(eq(playlists.userId, userId)).all();
+  const tenantId = await getTenantId();
+  return await db.select().from(playlists).where(eq(playlists.tenantId, tenantId)).all();
 }
 
 export async function updatePlaylist(id: number, name: string, description?: string) {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   await db.update(playlists)
     .set({ name, description })
-    .where(and(eq(playlists.id, id), eq(playlists.userId, userId)))
+    .where(and(eq(playlists.id, id), eq(playlists.tenantId, tenantId)))
     .run();
   revalidatePath('/playlists');
 }
 
 export async function deletePlaylist(id: number) {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   await db.update(posts)
     .set({ playlistId: null })
-    .where(and(eq(posts.playlistId, id), eq(posts.userId, userId)))
+    .where(and(eq(posts.playlistId, id), eq(posts.tenantId, tenantId)))
     .run();
     
   await db.delete(playlists)
-    .where(and(eq(playlists.id, id), eq(playlists.userId, userId)))
+    .where(and(eq(playlists.id, id), eq(playlists.tenantId, tenantId)))
     .run();
   revalidatePath('/playlists');
 }
 
 export async function addPostToPlaylist(postId: number, playlistId: number | null) {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   await db.update(posts)
     .set({ playlistId })
-    .where(and(eq(posts.id, postId), eq(posts.userId, userId)))
+    .where(and(eq(posts.id, postId), eq(posts.tenantId, tenantId)))
     .run();
   revalidatePath('/');
 }
@@ -99,11 +99,11 @@ export async function createPost(
   isScheduleActive: boolean = true,
   playlistId?: number | null
 ) {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   const processedContent = enforceEmojis(content);
   
   await db.insert(posts).values({
-    userId,
+    tenantId,
     content: processedContent,
     imageUrl: imageUrl || null,
     status: 'inventory',
@@ -116,8 +116,8 @@ export async function createPost(
 }
 
 export async function getPosts() {
-  const userId = await getUserId();
-  const allPosts = await db.select().from(posts).where(eq(posts.userId, userId)).all();
+  const tenantId = await getTenantId();
+  const allPosts = await db.select().from(posts).where(eq(posts.tenantId, tenantId)).all();
   
   return {
     inventory: allPosts.filter(p => p.status === 'inventory'),
@@ -126,10 +126,10 @@ export async function getPosts() {
 }
 
 export async function updatePostStatus(id: number, status: 'inventory' | 'posted' | 'archived') {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   await db.update(posts)
     .set({ status })
-    .where(and(eq(posts.id, id), eq(posts.userId, userId)))
+    .where(and(eq(posts.id, id), eq(posts.tenantId, tenantId)))
     .run();
   revalidatePath('/');
 }
@@ -142,7 +142,7 @@ export async function updatePost(
   scheduledAt?: Date | null,
   isScheduleActive?: boolean
 ) {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   const processedContent = enforceEmojis(content);
   await db.update(posts)
     .set({ 
@@ -152,19 +152,19 @@ export async function updatePost(
       scheduledAt: scheduledAt === undefined ? undefined : scheduledAt,
       isScheduleActive: isScheduleActive === undefined ? undefined : isScheduleActive
     })
-    .where(and(eq(posts.id, id), eq(posts.userId, userId)))
+    .where(and(eq(posts.id, id), eq(posts.tenantId, tenantId)))
     .run();
   revalidatePath('/');
 }
 
 export async function postNow(id: number) {
-  const userId = await getUserId();
-  const post = await db.select().from(posts).where(and(eq(posts.id, id), eq(posts.userId, userId))).get();
+  const tenantId = await getTenantId();
+  const post = await db.select().from(posts).where(and(eq(posts.id, id), eq(posts.tenantId, tenantId))).get();
   if (!post) throw new Error('Post not found');
 
   console.log(`[ACTION] Posting immediate: ${post.id}`);
   
-  const result = await postToLinkedIn(post.content, post.imageUrl);
+  const result = await postToLinkedIn(post.content, post.imageUrl, tenantId);
   
   if (!result.success) {
     console.error(`[ACTION_ERROR] LinkedIn post failed: ${result.message}`);
@@ -179,17 +179,16 @@ export async function postNow(id: number) {
       playlistId: null,
       scheduledAt: null
     })
-    .where(and(eq(posts.id, id), eq(posts.userId, userId)))
+    .where(and(eq(posts.id, id), eq(posts.tenantId, tenantId)))
     .run();
 
   revalidatePath('/');
 }
 
 export async function deletePost(id: number) {
-  const userId = await getUserId();
+  const tenantId = await getTenantId();
   await db.delete(posts)
-    .where(and(eq(posts.id, id), eq(posts.userId, userId)))
+    .where(and(eq(posts.id, id), eq(posts.tenantId, tenantId)))
     .run();
   revalidatePath('/');
 }
-
